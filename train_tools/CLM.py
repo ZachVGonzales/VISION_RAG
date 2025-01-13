@@ -38,8 +38,7 @@ if __name__ == "__main__":
   # Data collator for CLM
   clm_data_collator = DataCollatorForSeq2Seq(
     tokenizer=tokenizer,
-    mlm=True,
-    mlm_probability=0.15  # Masking 15% of the tokens
+    model=model
   )
 
   training_args = TrainingArguments(
@@ -64,3 +63,7 @@ if __name__ == "__main__":
     tokenizer=tokenizer,
   )
 
+  trainer_clm.train()
+
+  model.save_pretrained("./phi-3.5-finetuned")
+  tokenizer.save_pretrained("./phi-3.5-finetuned")
