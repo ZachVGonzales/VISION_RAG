@@ -13,7 +13,7 @@ def init():
 
 # Tokenization function
 def tokenize_function(examples):
-  return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=4096)
+  return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=16000)
   
 
 if __name__ == "__main__":
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
   dataset = Dataset.from_list(data)
 
-  tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
+  tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
   tokenized_dataset = dataset.map(tokenize_function, batched=True)
 
   tokenized_dataset.save_to_disk(hf_path)

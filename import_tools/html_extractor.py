@@ -51,9 +51,18 @@ def create_db(connection: sqlite3.Connection):
   c = connection.cursor()
 
   c.execute('''
-            CREATE TABLE IF NOT EXISTS paragraphs (
+            CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY,
                 content TEXT
+            )
+            ''')
+
+  c.execute('''
+            CREATE TABLE IF NOT EXISTS paragraphs (
+                id INTEGER PRIMARY KEY,
+                document_id INTEGER,
+                content TEXT,
+                FOREIGN KEY (document_id) REFERENCES documents(id)
             )
             ''')
 
@@ -69,15 +78,45 @@ def create_db(connection: sqlite3.Connection):
   connection.commit()
 
 
-def store(connection: sqlite3.Connection, sentences: list[str]):
+def store_paragraph(connection: sqlite3.Connection, sentences: list[str], doc_id: int):
   paragraph = " ".join(sentences)
 
   c = connection.cursor()
-  c.execute('INSERT INTO paragraphs (content) VALUES (?)', (paragraph,))
+  c.execute('INSERT INTO paragraphs (document_id, content) VALUES (?, ?)', (doc_id, paragraph))
   paragraph_id = c.lastrowid  # Get the id of the inserted paragraph
 
   for sentence in sentences:
     c.execute('INSERT INTO sentences (paragraph_id, sentence) VALUES (?, ?)', (paragraph_id, sentence))
+
+  connection.commit()
+  return True
+
+
+def store(connection: sqlite3.Connection, soup: BeautifulSoup):
+  text_content = soup.get_text(separator=" ", strip=True)
+
+  c = connection.cursor()
+  c.execute('INSERT INTO documents (content) VALUES (?)', (text_content,))
+  doc_id = c.lastrowid
+
+  paragraphs = soup.find_all('p')
+  prev_para = []
+  
+  for paragraph in paragraphs[::-1]:
+    paragraph = paragraph.get_text(separator=' ', strip=True)
+    words = paragraph.split(" ")
+
+    if len(paragraph) <= SENT_WC or words[0] == "Navigation:":
+      continue
+
+    prev_para.insert(0, paragraph)
+    sentences = split_paragraph(paragraph)
+      
+    if len(sentences) <= 1:
+      continue
+    else:
+      store_paragraph(connection, prev_para, doc_id)
+      prev_para = []
 
   connection.commit()
   return True
@@ -90,6 +129,7 @@ if __name__ == "__main__":
   session = HTMLSession()
 
   connection = sqlite3.connect(db_path)
+  cursor = connection.cursor()
   create_db(connection)
 
   # itter through all possible files (recursive)
@@ -107,26 +147,7 @@ if __name__ == "__main__":
     response = session.get(file_url)
     response.html.render()
     soup = BeautifulSoup(response.html.html, "html.parser")
-    text_content = soup.get_text(separator=" ", strip=True)
-    paragraphs = soup.find_all('p')
-    prev_para = []
-    
-    for paragraph in paragraphs[::-1]:
-      paragraph = paragraph.get_text(separator=' ', strip=True)
-      words = paragraph.split(" ")
-
-      if len(paragraph) <= SENT_WC or words[0] == "Navigation:":
-        continue
-
-      prev_para.insert(0, paragraph)
-      sentences = split_paragraph(paragraph)
-      
-      
-      if len(sentences) <= 1:
-        continue
-      else:
-        store(connection, prev_para)
-        prev_para = []
+    store(connection, soup)
   
   connection.commit()
   connection.close()
