@@ -74,14 +74,14 @@ def create_vector_store(documents, embedding_model, save_path):
     except KeyboardInterrupt:
       logging.warning("Process Interupted! Saving and quiting...")
 
-      vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
+      vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id, embedding_function=embedding_model.embed_query)
       vector_store.save_local(save_path)
       logging.info(f"Vector store saved to {save_path} Exiting.")
       
       raise
 
     # Step 4: Create the FAISS vector store with the index and mappings
-    vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
+    vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id, embedding_function=embedding_model.embed_query)
     vector_store.save_local(save_path)
     logging.info(f"Vector store created successfully in {save_path}")
     
