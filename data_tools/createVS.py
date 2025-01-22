@@ -38,13 +38,13 @@ def load_documents_from_db(db_path, table_name):
     
     return documents
 
-# Split documents into manageable chunks
+# Split documents into manageable chunks  
 def split_documents(documents):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     return text_splitter.split_documents(documents)
 
 # Create vector store using FAISS
-def create_vector_store(documents, embedding_model):
+def create_vector_store(documents, embedding_model, save_path):
     logging.info("Creating vector store with FAISS")
 
     # Step 1: Create a FAISS index
@@ -55,23 +55,35 @@ def create_vector_store(documents, embedding_model):
     docstore = {}
     index_to_docstore_id = {}
 
-    # Step 3: Process and add documents
-    for idx, doc in enumerate(tqdm(documents, desc="Indexing documents")):
+    # Wrap in try catch to save incase of keyboard interupt
+    try:
+      # Step 3: Process and add documents
+      for idx, doc in enumerate(tqdm(documents, desc="Indexing documents")):
         # Embed the document and add to FAISS index
         embedding = embedding_model.embed_query(doc.page_content)
         embedding = np.array(embedding, dtype=np.float32).reshape(1, -1)
         index.add(embedding)
-        
+          
         # Store document in docstore and map the index
         doc_id = f"doc_{idx}"
         docstore[doc_id] = doc
         index_to_docstore_id[idx] = doc_id
 
         logging.info(f"Indexed document {idx + 1}/{len(documents)}")
+    
+    except Exception or KeyboardInterrupt as e:
+      logging.warning("Process Interupted! Saving and quiting...")
+
+      vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
+      vector_store.save_local(save_path)
+      logging.info(f"Vector store saved to {save_path} Exiting.")
+      
+      raise e
 
     # Step 4: Create the FAISS vector store with the index and mappings
     vector_store = FAISS(index=index, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
-    logging.info("Vector store created successfully")
+    vector_store.save_local(save_path)
+    logging.info(f"Vector store created successfully in {save_path}")
     
     return vector_store
 
@@ -81,7 +93,7 @@ def main():
     params = init()
     db_path = params.db_path
     table_name = params.table_name
-    save_file = params.save_location
+    save_path = params.save_location
     
     # Load and split the documents
     documents = load_documents_from_db(db_path, table_name)
@@ -89,12 +101,8 @@ def main():
 
     embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
 
-    # Create vector store
-    vector_store = create_vector_store(split_docs, embeddings)
-
-    # Save the vector store for future use
-    vector_store.save_local(save_file)
-
+    # Create and save vector store
+    create_vector_store(split_docs, embeddings, save_path)
     print("Vector database created and saved successfully!")
 
 if __name__ == "__main__":
