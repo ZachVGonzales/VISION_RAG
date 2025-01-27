@@ -7,6 +7,7 @@ class AgentGraphState(TypedDict):
   input_querry: str
   objective_analysis_response: Annotated[list, add_messages]
   router_response: Annotated[list, add_messages]
+  obj_selector_response: Annotated[list, add_messages]
   base_response: Annotated[list, add_messages]
   end_chain: Annotated[list, add_messages]
     
@@ -14,6 +15,7 @@ state = {
     "input_querry": "",
     "objective_analysis_response": [],
     "router_response": [],
+    "obj_selector_response": [],
     "base_response": [],
     "end_chain": []
 }

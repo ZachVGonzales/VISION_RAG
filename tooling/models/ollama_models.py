@@ -1,6 +1,8 @@
 import requests
 import json
+from termcolor import colored
 from langchain_core.messages.human import HumanMessage
+
 
 class OllamaJSONModel:
   def __init__(self, temperature=0, model="deepseek-r1:1.5b"):
@@ -15,7 +17,7 @@ class OllamaJSONModel:
     payload = {
       "model": self.model,
       "prompt": user,
-      "format": "json",
+      #"format": "json",
       "system": system,
       "stream": False,
       "temperature": 0,
@@ -31,6 +33,7 @@ class OllamaJSONModel:
       print("REQUEST RESPONSE", request_response)
       request_response_json = request_response.json()
       # print("REQUEST RESPONSE JSON", request_response_json)
+      print(colored(f"ROUTER RESPONSE PRE JSON FORMATTING: {request_response_json['response']}", "red"))
       response = json.loads(request_response_json['response'])
       response = json.dumps(response)
       response_formatted = HumanMessage(content=response)
